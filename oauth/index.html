@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Conectar el vault</title>
+<style>
+  :root { --bg:#f6f5f2; --card:#fff; --text:#1d1d1f; --muted:#6b6b70; --accent:#5b4bdb; --err:#b3261e; --border:#e2e0db; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#17171a; --card:#222226; --text:#ededf0; --muted:#a0a0a8; --accent:#8f84ff; --err:#ff8a80; --border:#34343a; } }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:16px;
+         background:var(--bg); color:var(--text); font:16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { width:100%; max-width:400px; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:28px; }
+  h1 { font-size:1.3rem; margin:0 0 6px; }
+  p { margin:0 0 18px; color:var(--muted); font-size:.95rem; }
+  label { display:block; font-size:.85rem; margin:14px 0 6px; }
+  input { width:100%; padding:11px 12px; border:1px solid var(--border); border-radius:9px; background:transparent; color:var(--text); font-size:1rem; }
+  button { width:100%; margin-top:22px; padding:12px; border:0; border-radius:9px; background:var(--accent); color:#fff; font-size:1rem; font-weight:600; cursor:pointer; }
+  button:disabled { opacity:.6; cursor:wait; }
+  .err { color:var(--err); font-size:.9rem; margin-top:14px; min-height:1.2em; }
+  .note { font-size:.8rem; margin-top:18px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Conectar el vault de Obsidian</h1>
+  <p id="who">Una aplicación quiere <strong>leer</strong> tu vault (solo lectura: no puede escribir ni borrar nada).</p>
+  <form id="f">
+    <label for="email">Usuario del vault (email)</label>
+    <input id="email" type="email" autocomplete="username" required>
+    <label for="password">Contraseña</label>
+    <input id="password" type="password" autocomplete="current-password" required>
+    <button id="b" type="submit">Conectar</button>
+    <div class="err" id="err" role="alert"></div>
+  </form>
+  <p class="note">La contraseña va directo a tu servidor y no se guarda. Si no iniciaste esta conexión vos, cerrá esta página.</p>
+</main>
+<script>
+  const qs = new URLSearchParams(location.search);
+  const api = qs.get("api") || "";
+  const q = qs.get("q") || "";
+  const err = document.getElementById("err");
+  const valid = /^https:\/\/[a-z0-9]+\.supabase\.co\/functions\/v1\/vault-mcp$/.test(api) && q;
+  try {
+    const redirect = new URL(new URLSearchParams(q).get("redirect_uri"));
+    const names = { "chatgpt.com": "ChatGPT", "chat.openai.com": "ChatGPT", "claude.ai": "Claude", "claude.com": "Claude" };
+    const name = names[redirect.hostname] || redirect.hostname;
+    document.getElementById("who").innerHTML = "";
+    document.getElementById("who").append("", Object.assign(document.createElement("strong"), { textContent: name }),
+      " quiere leer tu vault (solo lectura: no puede escribir ni borrar nada).");
+  } catch (e) {}
+  if (!valid) { err.textContent = "Enlace inválido. Volvé a iniciar la conexión desde la aplicación."; document.getElementById("b").disabled = true; }
+  document.getElementById("f").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    if (!valid) return;
+    const b = document.getElementById("b");
+    b.disabled = true; err.textContent = "";
+    try {
+      const res = await fetch(api + "/login", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: document.getElementById("email").value, password: document.getElementById("password").value, q }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.redirect) throw new Error(data.error || "No se pudo conectar");
+      location.replace(data.redirect);
+    } catch (e) {
+      err.textContent = e.message; b.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
