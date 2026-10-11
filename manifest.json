@@ -1,7 +1,7 @@
 {
 	"id": "obsidian-supabase-sync",
 	"name": "Supabase Sync",
-	"version": "0.3.3",
+	"version": "0.4.0",
 	"minAppVersion": "1.5.0",
 	"description": "Sincronización bidireccional offline-first entre el vault y Supabase.",
 	"author": "jcpdt",
